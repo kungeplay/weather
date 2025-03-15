@@ -33,13 +33,13 @@ func main() {
 
 func reportWithPiper(prologueTexts []string, weatherTexts []string) {
 	texts := append(prologueTexts, weatherTexts...)
-	setVolume(20)
+	setVolume(40)
 	playAudio("/home/liujiakun/Data/thirdSoft/audio/call-to-attention-123107.wav")
 
 	for i := range texts {
 		playTextWithPiper(texts[i])
 	}
-	setVolume(30)
+	setVolume(70)
 }
 
 func reportWithCoquiAi(prologueTexts []string, weatherTexts []string) {
@@ -48,13 +48,13 @@ func reportWithCoquiAi(prologueTexts []string, weatherTexts []string) {
 	str := strings.Join(weatherTexts, "。")
 	genTtsWav(str, wavFile)
 
-	setVolume(20)
+	setVolume(40)
 	playAudio("/home/liujiakun/Data/thirdSoft/audio/call-to-attention-123107.wav")
 	for i := range prologueTexts { //开场白中有时间信息，仍旧使用较快的piper
 		playTextWithPiper(prologueTexts[i])
 	}
 	playAudio(wavFile)
-	setVolume(30)
+	setVolume(70)
 }
 
 // coqui_ai 性能较差
