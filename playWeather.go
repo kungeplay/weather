@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,16 +15,30 @@ import (
 	"time"
 )
 
+func init() {
+	// 创建日志文件
+	logFile, err := os.OpenFile("/tmp/weather.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal("无法创建日志文件:", err)
+	}
+
+	// 设置日志输出到文件和控制台
+	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+	
+	// 设置日志格式，包含时间、文件名和行号
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
+
 func main() {
 	weatherTexts, err := getWeatherDetailText()
 	if err != nil {
-		fmt.Println("getWeatherDetailText err", err)
+		log.Println("getWeatherDetailText err", err)
 		return
 	}
 	//欢迎词
 	prologueTexts := genPrologueText()
 	reportType := os.Args[1:]
-	fmt.Println(os.Args[0], " args:", reportType)
+	log.Println(os.Args[0], " args:", reportType)
 	if len(reportType) >= 1 && reportType[0] == "tts" {
 		reportWithCoquiAi(prologueTexts, weatherTexts)
 	} else {
@@ -59,25 +74,25 @@ func reportWithCoquiAi(prologueTexts []string, weatherTexts []string) {
 
 // coqui_ai 性能较差
 func genTtsWav(content string, fileName string) {
-	fmt.Println("gen content:" + content)
+	log.Println("gen content:" + content)
 	// 注意需在外部调用环境(比如shell脚本)中设置TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD="1"
 	ttsCmd := exec.Command("/home/liujiakun/venv/tts_coqui_ai/bin/tts", "--text", content, "--model_name", "tts_models/zh-CN/baker/tacotron2-DDC-GST", "--vocoder_name", "vocoder_models/universal/libri-tts/fullband-melgan", "--out_path", fileName)
 	var buffer bytes.Buffer
 	ttsCmd.Stdout = &buffer
 	if err := ttsCmd.Start(); err != nil {
-		fmt.Println("tts command start error", err.Error())
+		log.Println("tts command start error", err.Error())
 		return
 	}
 	if err := ttsCmd.Wait(); err != nil {
-		fmt.Println("tts command wait error", err.Error())
+		log.Println("tts command wait error", err.Error())
 		return
 	}
-	fmt.Println("gen Tts Wav result:" + buffer.String())
+	log.Println("gen Tts Wav result:" + buffer.String())
 }
 
 // 播放音频，piper性能较好
 func playTextWithPiper(content string) {
-	fmt.Println("play content:" + content)
+	log.Println("play content:" + content)
 
 	echoCmd := exec.Command("echo", content)
 	piperCmd := exec.Command("/home/liujiakun/Data/thirdSoft/piper/piper", "--model", "/home/liujiakun/Data/thirdSoft/piper/voices/zh_CN-huayan-medium.onnx", "--output-raw")
@@ -99,44 +114,44 @@ func playTextWithPiper(content string) {
 	aplayCmd.Stdout = &buffer
 
 	if err := echoCmd.Start(); err != nil {
-		fmt.Println("echo command start error", err.Error())
+		log.Println("echo command start error", err.Error())
 		return
 	}
 	if err := piperCmd.Start(); err != nil {
-		fmt.Println("piper command start error", err.Error())
+		log.Println("piper command start error", err.Error())
 		return
 	}
 	if err := aplayCmd.Start(); err != nil {
-		fmt.Println("aplay command start error", err.Error())
+		log.Println("aplay command start error", err.Error())
 		return
 	}
 	if err := echoCmd.Wait(); err != nil {
-		fmt.Println("echo command wait error", err.Error())
+		log.Println("echo command wait error", err.Error())
 		return
 	}
 	if err := w1.Close(); err != nil {
-		fmt.Println("pipe 1 close error", err.Error())
+		log.Println("pipe 1 close error", err.Error())
 		return
 	}
 	if err := piperCmd.Wait(); err != nil {
-		fmt.Println("piper command wait error", err.Error())
+		log.Println("piper command wait error", err.Error())
 		return
 	}
 	if err := w2.Close(); err != nil {
-		fmt.Println("pipe 2 close error", err.Error())
+		log.Println("pipe 2 close error", err.Error())
 		return
 	}
 	if err := aplayCmd.Wait(); err != nil {
-		fmt.Println("aplay command wait error", err.Error())
+		log.Println("aplay command wait error", err.Error())
 		return
 	}
 
-	fmt.Println("play result:" + buffer.String())
+	log.Println("play result:" + buffer.String())
 }
 
 // 播放音频2
 func playTextWithPiper2(content string) {
-	fmt.Println("play content:" + content)
+	log.Println("play content:" + content)
 
 	//使用管道,生成音频文件
 	echoCmd := exec.Command("echo", content)
@@ -149,23 +164,23 @@ func playTextWithPiper2(content string) {
 	var piperBuffer bytes.Buffer
 	piperCmd.Stdout = &piperBuffer
 	if err := echoCmd.Start(); err != nil {
-		fmt.Println("echo command start error", err)
+		log.Println("echo command start error", err)
 		return
 	}
 	if err := piperCmd.Start(); err != nil {
-		fmt.Println("piper command start error", err)
+		log.Println("piper command start error", err)
 		return
 	}
 	if err := echoCmd.Wait(); err != nil {
-		fmt.Println("echo command wait error", err)
+		log.Println("echo command wait error", err)
 		return
 	}
 	if err := w1.Close(); err != nil {
-		fmt.Println("pipe 1 close error", err)
+		log.Println("pipe 1 close error", err)
 		return
 	}
 	if err := piperCmd.Wait(); err != nil {
-		fmt.Println("piper command wait error", err)
+		log.Println("piper command wait error", err)
 		return
 	}
 	//播放音频
@@ -173,14 +188,14 @@ func playTextWithPiper2(content string) {
 	var playBuffer bytes.Buffer
 	playCmd.Stdout = &playBuffer
 	if err := playCmd.Start(); err != nil {
-		fmt.Println("aplay command start error", err)
+		log.Println("aplay command start error", err)
 		return
 	}
 	if err := playCmd.Wait(); err != nil {
-		fmt.Println("play command wait error", err.Error())
+		log.Println("play command wait error", err.Error())
 		return
 	}
-	fmt.Println("play result:" + playBuffer.String())
+	log.Println("play result:" + playBuffer.String())
 }
 
 // 开场白
@@ -191,7 +206,7 @@ func genPrologueText() []string {
 	currentHourStr := strings.TrimPrefix(split[3], "0")
 	currentHour, err := strconv.Atoi(currentHourStr)
 	if err != nil {
-		fmt.Println("strconv.atoi error", err)
+		log.Println("strconv.atoi error", err)
 	}
 	var prologueContents []string
 	prologueContents = append(prologueContents, "嗨")
@@ -212,11 +227,11 @@ func setVolume(volume int) {
 	var amixerBuffer bytes.Buffer
 	amixerCmd.Stdout = &amixerBuffer
 	if err := amixerCmd.Start(); err != nil {
-		fmt.Println("amixer command start error", err)
+		log.Println("amixer command start error", err)
 		return
 	}
 	if err := amixerCmd.Wait(); err != nil {
-		fmt.Println("amixer command wait error", err.Error())
+		log.Println("amixer command wait error", err.Error())
 		return
 	}
 }
@@ -228,11 +243,11 @@ func playAudio(audioFile string) {
 	var playBuffer bytes.Buffer
 	aplayCmd.Stdout = &playBuffer
 	if err := aplayCmd.Start(); err != nil {
-		fmt.Println("aplayCmd command start error", err)
+		log.Println("aplayCmd command start error", err)
 		return
 	}
 	if err := aplayCmd.Wait(); err != nil {
-		fmt.Println("aplayCmd command wait error", err)
+		log.Println("aplayCmd command wait error", err)
 		return
 	}
 }
@@ -242,7 +257,7 @@ func getWeatherDetailText() ([]string, error) {
 	key := os.Getenv("A_MAP_LBS_KEY") //获取环境变量中查询天气开放平台的key
 	liveWeather, err := queryWeather(adcode, BASE, key)
 	if err != nil {
-		fmt.Println("query live weather error", err)
+		log.Println("query live weather error", err)
 		return nil, err
 	}
 	liveDetails := []string{}
@@ -256,7 +271,7 @@ func getWeatherDetailText() ([]string, error) {
 	}
 	foreCaseWeather, err := queryWeather(adcode, ALL, key)
 	if err != nil {
-		fmt.Println("query foreCase weather error", err)
+		log.Println("query foreCase weather error", err)
 		return nil, err
 	}
 	casts := foreCaseWeather.Forecasts[0].Casts
@@ -355,7 +370,7 @@ func queryWeather(abCode string, extension Extension, key string) (*WeatherInfoR
 	params := url.Values{}
 	lastUrl, err := url.Parse("https://restapi.amap.com/v3/weather/weatherInfo")
 	if err != nil {
-		fmt.Println("url parse error", err)
+		log.Println("url parse error", err)
 		return nil, err
 	}
 	params.Set("key", key)
@@ -364,10 +379,10 @@ func queryWeather(abCode string, extension Extension, key string) (*WeatherInfoR
 	params.Set("output", "JSON")                //返回格式,可选值：JSON,XML
 	lastUrl.RawQuery = params.Encode()
 	urlPath := lastUrl.String()
-	fmt.Println("query weather request url:" + urlPath)
+	log.Println("query weather request url:" + urlPath)
 	resp, err := http.Get(urlPath)
 	if err != nil {
-		fmt.Println("http get error", err)
+		log.Println("http get error", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -375,10 +390,10 @@ func queryWeather(abCode string, extension Extension, key string) (*WeatherInfoR
 	infoResp := WeatherInfoResp{}
 	err = json.Unmarshal(body, &infoResp)
 	if err != nil {
-		fmt.Println("json unmarshal error", err)
+		log.Println("json unmarshal error", err)
 		return nil, err
 	}
-	fmt.Println("query weather resp:" + string(body))
+	log.Println("query weather resp:" + string(body))
 	return &infoResp, nil
 }
 
